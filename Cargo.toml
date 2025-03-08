@@ -1,0 +1,21 @@
+[package]
+name = "cript"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+ecies-ed25519.workspace = true
+base64 = "0.22.1"
+rand = "0.6.4"
+clap = { version = "4.4.11", features = ["derive"] }
+anyhow = "1.0.75"
+sha2 = "0.10.8"
+toml = { version = "0.8.20", features = ["parse"] }
+serde = { version = "1.0", features = ["derive"] }
+regex = "1.11.1"
+
+[workspace]
+members = ["packages/*"]
+
+[workspace.dependencies]
+ecies-ed25519 = { path = "./packages/ecies-ed25519" }
