@@ -2,6 +2,7 @@ use anyhow::{Context, Result, anyhow};
 use base64::{self, Engine};
 use clap::{Parser, Subcommand};
 use cript::config::load_config;
+use cript::{gen_key, passwd_to_secret_key};
 use ecies_ed25519;
 use regex::Regex;
 use std::fs;
@@ -40,6 +41,10 @@ enum Commands {
         #[arg(short, long)]
         output: Option<PathBuf>,
     },
+    /// 输入密钥生成公钥
+    GenPublicKey {
+        password: String,
+    }
 }
 
 fn main() -> Result<()> {
@@ -155,6 +160,9 @@ fn main() -> Result<()> {
                 .map_err(|e| anyhow!("无法写入文件 {}: {}", output_path.display(), e))?;
 
             println!("已解密文件并保存到: {}", output_path.display());
+        }
+        Commands::GenPublicKey { password } => {
+            println!("{}", gen_key(&password))
         }
     }
 
