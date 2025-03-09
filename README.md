@@ -25,13 +25,11 @@ Can be convert into:
 ```markdown
 # Test
 
-{cript}Hello Cript{/cript}
+{cript,Y8gkWm0noDfp2Dm45p7iadC7um7hfKMNPOv7gUepSaep955MEFqHoAElgnPTKgrq877ynhFyM9hOr7gU31kHOCJfe/omfVk=/}
 
-{cript}
-Hello Cript
-{/cript}
+{cript,k8ECTpBAvKhkZ1NlHBGsN2g+fBq2dow8rXzG58Um8XOLE4OFxx8cuyN9NfOzYnznv6ZoJfZLBh2DUcPooroXL/3+1OyGtgehnw==/}
 
-asdasdjsak
+asdasdjsa
 ```
 
 And vice versa.
