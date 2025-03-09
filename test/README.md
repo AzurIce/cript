@@ -13,7 +13,7 @@ For example, a `test.md` with following content:
 
 {cript}Hello Cript{/cript}
 
-{cript=default}
+{cript}
 Hello Cript
 {/cript}
 
@@ -59,8 +59,7 @@ cargo install --git https://github.com/AzurIce/cript.git --locked
 
 ```toml
 # Cript.toml
-extensions = ["md"]         # leave empty for all ext
-excludes = ["**/README.md"] # support file glob for exludes
+extensions = ["ext"] # leave empty for all ext
 [key]
 default = "<base64-public-key>"
 a = "<base64-public-key>"

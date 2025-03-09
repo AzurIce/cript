@@ -21,9 +21,9 @@ enum Commands {
         subcommand: KeysCommands,
     },
     /// Encrypt the Cript Block(Plain text) in all cript files under the path
-    Encrypt { path: PathBuf },
+    Encrypt { path: Option<PathBuf> },
     /// Decrypt the Cript Block(Encrypted) in all cript files under the path
-    Decrypt { path: PathBuf },
+    Decrypt { path: Option<PathBuf> },
 }
 
 #[derive(Subcommand)]
@@ -88,6 +88,7 @@ fn main() -> Result<()> {
             }
         }
         Commands::Encrypt { path } => {
+            let path = path.unwrap_or(PathBuf::from("./"));
             let files = get_cript_files(&path, &config)?
                 .into_iter()
                 .filter_map(|path| {
@@ -114,6 +115,7 @@ fn main() -> Result<()> {
             }
         }
         Commands::Decrypt { path } => {
+            let path = path.unwrap_or(PathBuf::from("./"));
             let password_config = PasswordConfig::from_env();
             let files = get_cript_files(&path, &config)?
                 .into_iter()
@@ -160,10 +162,13 @@ fn get_cript_files(path: &Path, config: &CriptConfig) -> Result<Vec<PathBuf>> {
     } else {
         let mut patterns = vec![];
         for ext in &config.extensions {
-            patterns.push(format!("**/*.{}", ext));
+            patterns.push(format!("**/*.{ext}"));
         }
         if patterns.is_empty() {
             patterns.push("**/*".to_string());
+        }
+        for exclude in &config.excludes {
+            patterns.push(format!("!{exclude}"));
         }
         globwalk::GlobWalkerBuilder::from_patterns(path, &patterns)
             .build()?

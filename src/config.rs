@@ -38,19 +38,18 @@ impl KeyEntry {
 pub struct CriptConfig {
     #[serde(default)]
     pub keys: HashMap<String, KeyEntry>,
-    #[serde(default = "no_extensions")]
+    #[serde(default = "Vec::new")]
     pub extensions: Vec<String>,
-}
-
-fn no_extensions() -> Vec<String> {
-    vec![]
+    #[serde(default = "Vec::new")]
+    pub excludes: Vec<String>,
 }
 
 impl Default for CriptConfig {
     fn default() -> Self {
         Self {
             keys: HashMap::new(),
-            extensions: vec!["cript".to_string()]
+            extensions: vec!["cript".to_string()],
+            excludes: vec![],
         }
     }
 }
