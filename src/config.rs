@@ -1,5 +1,4 @@
 use anyhow::{Context, Result, anyhow};
-use base64::Engine;
 use ecies_ed25519::PublicKey;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -30,6 +29,8 @@ impl KeyEntry {
     }
 }
 
+// MARK: CriptConfig
+
 /// 表示解析后的 Cript.toml 配置
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CriptConfig {
@@ -45,19 +46,50 @@ impl CriptConfig {
         let public_key_base64 = self
             .get_public_key_base64(id)
             .ok_or(anyhow!("公钥 {id} 不存在"))?;
-        // Base64解码公钥
-        let public_key_bytes = base64::prelude::BASE64_STANDARD
-            .decode(&public_key_base64)
-            .map_err(|e| anyhow!("无法解码公钥: {}", e))?;
-
-        // 转换为ecies-ed25519库需要的公钥格式
-        ecies_ed25519::PublicKey::from_bytes(&public_key_bytes)
-            .map_err(|e| anyhow!("无效的公钥: {}", e))
+        PublicKey::try_from(public_key_base64).map_err(|e| anyhow!("无法解码公钥: {}", e))
     }
     pub fn get_name(&self, id: &str) -> Option<String> {
         self.keys
             .get(id)
             .and_then(|entry| entry.name().map(|s| s.to_string()).or(Some(id.to_string())))
+    }
+    /// 加载并解析cript.toml文件
+    pub fn load(start_dir: impl AsRef<Path>) -> Result<Self> {
+        let start_dir = start_dir.as_ref();
+        let config_path = find_config_in_ancestors(&start_dir)?;
+
+        let config_content = fs::read_to_string(&config_path)
+            .with_context(|| format!("Failed to read config file: {}", config_path.display()))?;
+
+        // 使用serde直接解析TOML
+        let config = toml::from_str::<Self>(&config_content)
+            .with_context(|| format!("Failed to parse TOML in {}", config_path.display()))?;
+
+        Ok(config)
+    }
+    
+    /// 保存配置到文件
+    pub fn save(&self, start_dir: impl AsRef<Path>) -> Result<()> {
+        let start_dir = start_dir.as_ref();
+        let config_path = find_config_in_ancestors(&start_dir)?;
+        
+        let toml_content = toml::to_string(self)
+            .with_context(|| "Failed to serialize config to TOML")?;
+            
+        fs::write(&config_path, toml_content)
+            .with_context(|| format!("Failed to write config file: {}", config_path.display()))?;
+            
+        Ok(())
+    }
+    
+    /// 设置密钥
+    pub fn set_key(&mut self, key_id: &str, public_key: &str) {
+        self.keys.insert(key_id.to_string(), KeyEntry::Simple(public_key.to_string()));
+    }
+    
+    /// 删除密钥
+    pub fn remove_key(&mut self, key_id: &str) -> bool {
+        self.keys.remove(key_id).is_some()
     }
 }
 
@@ -84,18 +116,33 @@ fn find_config_in_ancestors(start_dir: &Path) -> Result<PathBuf> {
     }
 }
 
-/// 加载并解析cript.toml文件
-pub fn load_config() -> Result<CriptConfig> {
-    let current_dir = std::env::current_dir().context("Failed to get current directory")?;
+// MARK: PasswordConfig
 
-    let config_path = find_config_in_ancestors(&current_dir)?;
+/// 表示密码配置，从环境变量中读取
+#[derive(Debug, Default)]
+pub struct PasswordConfig {
+    /// 存储密码的映射，key 为 key-id，value 为对应的密码
+    passwords: HashMap<String, String>,
+}
 
-    let config_content = fs::read_to_string(&config_path)
-        .with_context(|| format!("Failed to read config file: {}", config_path.display()))?;
+impl PasswordConfig {
+    /// 创建一个新的 PasswordConfig 实例，从环境变量中读取配置 `cript_<key-id> = password`
+    pub fn from_env() -> Self {
+        let mut config = PasswordConfig::default();
+        
+        // 遍历所有环境变量
+        for (key, value) in std::env::vars() {
+            // 检查是否以 cript_ 开头
+            if let Some(key_id) = key.strip_prefix("cript_") {
+                config.passwords.insert(key_id.to_string(), value);
+            }
+        }
+        
+        config
+    }
 
-    // 使用serde直接解析TOML
-    let config: CriptConfig = toml::from_str(&config_content)
-        .with_context(|| format!("Failed to parse TOML in {}", config_path.display()))?;
-
-    Ok(config)
+    /// 获取指定 key-id 对应的密码
+    pub fn get_password(&self, key_id: &str) -> Option<&str> {
+        self.passwords.get(key_id).map(|s| s.as_str())
+    }
 }

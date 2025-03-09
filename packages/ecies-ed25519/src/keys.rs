@@ -1,4 +1,5 @@
 use super::Error;
+use base64::Engine;
 use core::iter::FromIterator;
 use curve25519_dalek::constants;
 use curve25519_dalek::edwards::{CompressedEdwardsY, EdwardsPoint};
@@ -173,5 +174,53 @@ impl FromHex for PublicKey {
 impl AsRef<[u8]> for PublicKey {
     fn as_ref(&self) -> &[u8] {
         self.as_bytes()
+    }
+}
+
+/// Error types
+#[derive(Debug, Error)]
+pub enum Base64ToKeyError {
+    /// Encryption failed
+    #[error("ecies-rd25519: invalid base64 string")]
+    InvalidBase64String,
+
+    /// Invalid key bytes
+    #[error("ecies-rd25519: invalid public key bytes")]
+    InvalidKeyBytes,
+}
+
+#[cfg(feature = "base64")]
+impl TryFrom<String> for PublicKey {
+    type Error = Base64ToKeyError;
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        let bytes = base64::prelude::BASE64_STANDARD
+            .decode(value)
+            .map_err(|_| Base64ToKeyError::InvalidBase64String)?;
+        PublicKey::from_bytes(&bytes).map_err(|_| Base64ToKeyError::InvalidKeyBytes)
+    }
+}
+
+#[cfg(feature = "base64")]
+impl Into<String> for PublicKey {
+    fn into(self) -> String {
+        base64::prelude::BASE64_STANDARD.encode(self.to_bytes())
+    }
+}
+
+#[cfg(feature = "base64")]
+impl TryFrom<String> for SecretKey {
+    type Error = Base64ToKeyError;
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        let bytes = base64::prelude::BASE64_STANDARD
+            .decode(value)
+            .map_err(|_| Base64ToKeyError::InvalidBase64String)?;
+        SecretKey::from_bytes(&bytes).map_err(|_| Base64ToKeyError::InvalidKeyBytes)
+    }
+}
+
+#[cfg(feature = "base64")]
+impl Into<String> for SecretKey {
+    fn into(self) -> String {
+        base64::prelude::BASE64_STANDARD.encode(self.to_bytes())
     }
 }

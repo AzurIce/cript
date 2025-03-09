@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-ecies-ed25519.workspace = true
+ecies-ed25519 = { workspace = true, features = ["base64"] }
 base64 = "0.22.1"
 rand = "0.6.4"
 clap = { version = "4.4.11", features = ["derive"] }

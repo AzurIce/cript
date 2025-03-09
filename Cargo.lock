@@ -295,6 +295,7 @@ name = "ecies-ed25519"
 version = "0.1.0"
 dependencies = [
  "aes-gcm",
+ "base64",
  "curve25519-dalek",
  "digest",
  "hex",
