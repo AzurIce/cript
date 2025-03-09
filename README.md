@@ -1,15 +1,12 @@
 # Cript
 
-A simple text encrypt/decrypt tool:
-- `file.cript.md` <-> `file.md`
-- `file.cript` <-> `file`
-- ...
+A simple text file encrypt/decrypt cli tool.
 
 ## What does it do?
 
 It uses ecies(curve25519 + aes-gcm) to encrypt/decrypt blocks of your text file.
 
-For example, a `test.cript.md` with following content:
+For example, a `test.md` with following content:
 
 ```markdown
 # Test
@@ -23,33 +20,32 @@ Hello Cript
 asdasdjsak
 ```
 
-Can be convert to a `test.md` with following content and vice versa:
+Can be convert into:
 
 ```markdown
 # Test
 
-{cript}p7nz62LXnIEdnAaYdaSD6wn3QNBanOylD2tmhdbDSOcl6Cg7xp/+Nx5SGAcaWk3eTx0xWXgUFKuyoMTPG0UvzaiW88QYZkY={/cript}
+{cript,p7nz62LXnIEdnAaYdaSD6wn3QNBanOylD2tmhdbDSOcl6Cg7xp/+Nx5SGAcaWk3eTx0xWXgUFKuyoMTPG0UvzaiW88QYZkY=/}
 
-{cript=default}HZLLPbL+iBK2MJ0DadCg9Wn8cOcBD37VevQBs/PQbaGsRLykggzH4nZ3olBarxLonYDtZUfyTKjFAF52wqRlo3CIsOknlD4wCQ=={/cript}
+{cript=default,HZLLPbL+iBK2MJ0DadCg9Wn8cOcBD37VevQBs/PQbaGsRLykggzH4nZ3olBarxLonYDtZUfyTKjFAF52wqRlo3CIsOknlD4wCQ==/}
 
 asdasdjsak
 ```
 
-- **Cript File**:
-  The file has the name like `file.cript.xx` or `file.cript`.
-  They can be converted between plain text and encrypted text by cript:
-    - `file.cript.md` <-> `file.md`
-    - `file.cript` <-> `file`
-    - ...
-- **Cript Block**:
-  A block defined by `{cript[=<key-id>]}` and `{/cript}` tags.
-  The Encrypting process will use the corresponding **Public Key** defined in `Cript.toml` in base64 string format.
-  The decrypting process will use the corresponding **Password** provided through `cript_<key-id>=<password>` environment variables.
-- **Public Key** and **Password**
-  A Password can be parsed to a public key and the corresponding private key.
-  The public key will be used to encrypt the blocks, and the private key will be used to decrypt the blocks.
-  "Why not use the private key directly?"
-  Because it is too hard to memorize
+And vice versa.
+
+- **Cript Blocks**:
+  There are two types of Cipt Blocks:
+  - Plain Text: defined by `{cript[=<key-id>]}<plain-text-content>{/cript}` tags.
+  - Encrypted: defined by `{cript[=<key-id>],<encrypted-content>/}` tags.
+  The `<key-id>` specified which *Public Key* and *Password* to use/verify for encryption/decryption.
+  If ignored, then it will be `default`.
+- **Public key** and **Password**:
+  ECIES uses a *public key* for *encryption* and a *secret key* for *decryption*.
+
+  And they are parsed from the *password*.
+
+  The *public keys* are configured in `Cript.toml` by `keys.<key-id> = <public_key>` as base64 encoded string, and the *passwords* are provided through evironment variables like `cript_<key-id>`.
 
 ## Install
 
@@ -61,6 +57,7 @@ cargo install --git https://github.com/AzurIce/cript.git --locked
 
 ```toml
 # Cript.toml
+extensions = ["ext"] # leave empty for all ext
 [key]
 default = "<base64-public-key>"
 a = "<base64-public-key>"
@@ -71,18 +68,6 @@ cript keys set <key-id> <password>
 cript keys verify <key-id> <password>
 cript keys rm <keyi-d>
 cript keys list
-cript encrypt <path>
-cript decrypt <path>
-```
-
-```
-// source.cript[.xxx]
-
-{cript}
-multi
-line
-default
-{/cript}
-
-{cript=a}inline a{/cript}
+cript encrypt <path> # process all files matches the extensions under the path
+cript decrypt <path> # process all files matches the extensions under the path
 ```

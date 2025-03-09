@@ -13,6 +13,7 @@ sha2 = "0.10.8"
 toml = { version = "0.8.20", features = ["parse"] }
 serde = { version = "1.0", features = ["derive"] }
 regex = "1.11.1"
+globwalk = "0.9.1"
 
 [workspace]
 members = ["packages/*"]

@@ -1,87 +1,121 @@
-use std::{
-    ffi::OsStr,
-    fs,
-    path::{Path, PathBuf},
-};
-
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 use config::{CriptConfig, PasswordConfig};
 use regex::{Captures, Regex};
-use secret::{decrypt_str, encrypt_str, passwd_to_secret_key};
+use secret::{decrypt_str, encrypt_str};
 
 pub mod config;
 pub mod secret;
 
-/// 去掉 cript
-pub fn get_encrypt_path(path: impl AsRef<Path>) -> PathBuf {
-    let path = path.as_ref();
+pub enum CriptBlock {
+    PlainText(PlainTextBlock),
+    EncryptedBlock(EncryptedBlock),
+}
+pub struct PlainTextBlock {
+    key_id: String,
+    content: String,
+}
 
-    let encrypt_path = path.with_extension("");
-    if encrypt_path.extension().is_none() {
-        encrypt_path
-    } else {
-        encrypt_path.with_extension(path.extension().unwrap_or(OsStr::new("")))
+impl PlainTextBlock {
+    pub fn new(key_id: String, content: String) -> Self {
+        Self { key_id, content }
+    }
+    pub fn encrypt(self, config: &CriptConfig) -> Result<EncryptedBlock> {
+        Ok(EncryptedBlock {
+            content: encrypt_str(&self.content, &config.get_public_key(&self.key_id)?)?,
+            key_id: self.key_id,
+        })
+    }
+    pub fn get_block_string(&self) -> String {
+        if &self.key_id == "default" {
+            format!("{{cript}}{}{{/cript}}", self.content)
+        } else {
+            format!("{{cript={}}}{}{{/cript}}", self.key_id, self.content)
+        }
     }
 }
 
-/// filename.cript or filename.xxx.cript.yyy
-pub fn is_cript_path(path: impl AsRef<Path>) -> bool {
-    let filename = path.as_ref().file_name().and_then(|s| s.to_str()).unwrap();
-    let extensions = filename.split(".").skip(1).collect::<Vec<_>>();
-    if extensions.len() == 1 && extensions[0] == "cript"
-        || extensions.len() > 1 && extensions[extensions.len() - 2] == "cript"
-    {
-        true
-    } else {
-        false
+pub struct EncryptedBlock {
+    key_id: String,
+    content: String,
+}
+
+impl EncryptedBlock {
+    pub fn new(key_id: String, content: String) -> Self {
+        Self { key_id, content }
+    }
+    pub fn decrypt(self, password_config: &PasswordConfig) -> Result<PlainTextBlock> {
+        Ok(PlainTextBlock {
+            content: decrypt_str(
+                &self.content,
+                &password_config.get_secret_key(&self.key_id)?,
+            )?,
+            key_id: self.key_id,
+        })
+    }
+    pub fn get_block_string(&self) -> String {
+        if &self.key_id == "default" {
+            format!("{{cript,{}/}}", self.content)
+        } else {
+            format!("{{cript={},{}/}}", self.key_id, self.content)
+        }
     }
 }
 
-/// 添加 cript
-pub fn get_decrypt_path(path: impl AsRef<Path>) -> PathBuf {
-    let path = path.as_ref();
+const PLAIN_TEXT_RE: &str = r"\{cript(?:=([\w\-_]+))?\}([^{]+)\{\/cript\}";
+const ENCRYPTED_RE: &str = r"\{cript(?:=([\w\-_]+))?,(.+?)\/\}";
 
-    let extension = path
-        .extension()
-        .map(|ext| format!(".{}", ext.to_str().unwrap()))
-        .unwrap_or(String::new());
-    path.with_extension(format!("cript{extension}"))
-}
-
-pub fn encrypt_file(path: impl AsRef<Path>, config: &CriptConfig) -> Result<()> {
-    let path = path.as_ref();
-
-    let content = std::fs::read_to_string(path)?;
-
+pub fn encrypt_blocks(content: &str, config: &CriptConfig) -> Result<String> {
     // 创建正则表达式匹配 {cript} 或 {cript=key-id} 格式的标签及其内容
-    let re = Regex::new(r"(\{cript(?:=([^}]+))?\})([^{]+)(\{\/cript\})").unwrap();
+    let re = Regex::new(PLAIN_TEXT_RE).unwrap();
+    // 使用替换功能，对每个匹配项进行处理
+    replace_all(&re, &content, |caps: &regex::Captures| -> Result<String> {
+        // 获取密钥名称，如果没有指定则使用 "default"
+        let key_id = caps.get(1).map_or("default", |s| s.as_str()).to_string();
+        let content = caps[2].to_string();
+
+        let block = PlainTextBlock::new(key_id, content).encrypt(config);
+
+        block.map(|block| block.get_block_string())
+    })
+}
+
+pub fn decrypt_blocks(content: &str, password_config: &PasswordConfig) -> Result<String> {
+    // 创建正则表达式匹配新格式的加密内容
+    let re = Regex::new(ENCRYPTED_RE).unwrap();
 
     // 使用替换功能，对每个匹配项进行处理
-    let result = re.replace_all(&content, |caps: &regex::Captures| {
-        // 获取开始标签
-        let start_tag = &caps[1];
-        // 获取结束标签
-        let end_tag = &caps[4];
+    replace_all(&re, &content, |caps: &regex::Captures| -> Result<String> {
         // 获取密钥名称，如果没有指定则使用 "default"
-        let key_name = caps.get(2).map_or("default", |m| m.as_str());
-        let plain_text = &caps[3];
+        let key_id = caps.get(1).map_or("default", |m| m.as_str()).to_string();
+        let content = caps[2].to_string();
 
-        let public_key = config.get_public_key(key_name).unwrap();
+        let block = EncryptedBlock::new(key_id, content).decrypt(password_config);
 
-        // 使用密码解密内容
-        match encrypt_str(plain_text, &public_key) {
-            Ok(encrypted) => format!("{}{}{}", start_tag, encrypted, end_tag),
-            Err(e) => {
-                // 在实际应用中，你可能需要更好地处理错误
-                panic!("{}{}{}{}{}", start_tag, "[解密错误: ", e, "]", end_tag)
-            }
-        }
-    });
+        block.map(|block| block.get_block_string())
+    })
+}
 
-    // println!("{:?} {:?}", get_encrypt_path(path), result.to_string());
-    fs::write(get_encrypt_path(path), result.to_string())?;
+pub fn get_plain_text_blocks(content: &str) -> Vec<PlainTextBlock> {
+    let plain_text_re = Regex::new(PLAIN_TEXT_RE).unwrap();
+    let mut blocks = Vec::new();
+    for caps in plain_text_re.captures_iter(content) {
+        let key_id = caps.get(1).map_or("default", |m| m.as_str()).to_string();
+        let content = caps[2].to_string();
+        blocks.push(PlainTextBlock::new(key_id, content));
+    }
 
-    Ok(())
+    blocks
+}
+
+pub fn get_encrypted_blocks(content: &str) -> Vec<EncryptedBlock> {
+    let mut blocks = Vec::new();
+    let encrypted_re = Regex::new(ENCRYPTED_RE).unwrap();
+    for caps in encrypted_re.captures_iter(content) {
+        let key_id = caps.get(1).map_or("default", |m| m.as_str()).to_string();
+        let content = caps[2].to_string();
+        blocks.push(EncryptedBlock::new(key_id, content));
+    }
+    blocks
 }
 
 fn replace_all<E>(
@@ -99,63 +133,4 @@ fn replace_all<E>(
     }
     new.push_str(&haystack[last_match..]);
     Ok(new)
-}
-
-pub fn decrypt_file(path: impl AsRef<Path>, password_config: &PasswordConfig) -> Result<()> {
-    let path = path.as_ref();
-
-    let content = std::fs::read_to_string(path)?;
-
-    // 创建正则表达式匹配 {cript} 或 {cript=key-id} 格式的标签及其内容
-    let re = Regex::new(r"(\{cript(?:=([^}]+))?\})([^{]+)(\{\/cript\})").unwrap();
-
-    // 使用替换功能，对每个匹配项进行处理
-    let result = replace_all(&re, &content, |caps: &regex::Captures| -> Result<String> {
-        // 获取开始标签
-        let start_tag = &caps[1];
-        // 获取结束标签
-        let end_tag = &caps[4];
-        // 获取密钥名称，如果没有指定则使用 "default"
-        let key_name = caps.get(2).map_or("default", |m| m.as_str());
-        let encrypted_base64 = &caps[3];
-
-        let secret_key =
-            passwd_to_secret_key(password_config.get_password(key_name).ok_or(anyhow!(
-                "找不到 {} 对应的密码，通过 cript_{} 环境变量来设置",
-                key_name,
-                key_name
-            ))?);
-
-        // 使用密码解密内容
-        decrypt_str(encrypted_base64, &secret_key)
-            .map(|decrypted| format!("{}{}{}", start_tag, decrypted, end_tag))
-            .map_err(|err| anyhow!("{}{}{}{}{}", start_tag, "[dd解密错误: ", err, "]", end_tag))
-    })?;
-
-    fs::write(get_decrypt_path(path), result)?;
-
-    Ok(())
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn test_path() {
-        // 测试单一扩展名的文件
-        let path = PathBuf::from("/path/to/file.txt");
-        let decrypt_path = get_decrypt_path(&path);
-        assert_eq!(decrypt_path, PathBuf::from("/path/to/file.cript.txt"));
-
-        // 测试多个扩展名的文件
-        let path = PathBuf::from("/path/to/file.tar.gz");
-        let decrypt_path = get_decrypt_path(&path);
-        assert_eq!(decrypt_path, PathBuf::from("/path/to/file.tar.cript.gz"));
-
-        // 测试没有扩展名的文件
-        let path = PathBuf::from("/path/to/file");
-        let decrypt_path = get_decrypt_path(&path);
-        assert_eq!(decrypt_path, PathBuf::from("/path/to/file.cript"));
-    }
 }

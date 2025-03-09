@@ -1,9 +1,11 @@
 use anyhow::{Context, Result, anyhow};
-use ecies_ed25519::PublicKey;
+use ecies_ed25519::{PublicKey, SecretKey};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+
+use crate::secret::passwd_to_secret_key;
 
 /// 表示 Cript.toml 文件中的一个密钥条目
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -36,13 +38,28 @@ impl KeyEntry {
 pub struct CriptConfig {
     #[serde(default)]
     pub keys: HashMap<String, KeyEntry>,
+    #[serde(default = "no_extensions")]
+    pub extensions: Vec<String>,
+}
+
+fn no_extensions() -> Vec<String> {
+    vec![]
+}
+
+impl Default for CriptConfig {
+    fn default() -> Self {
+        Self {
+            keys: HashMap::new(),
+            extensions: vec!["cript".to_string()]
+        }
+    }
 }
 
 impl CriptConfig {
     pub fn get_public_key_base64(&self, id: &str) -> Option<String> {
         self.keys.get(id).map(|entry| entry.value().to_string())
     }
-    pub fn get_public_key(&self, id: &str) -> anyhow::Result<PublicKey> {
+    pub fn get_public_key(&self, id: &str) -> Result<PublicKey> {
         let public_key_base64 = self
             .get_public_key_base64(id)
             .ok_or(anyhow!("公钥 {id} 不存在"))?;
@@ -67,26 +84,27 @@ impl CriptConfig {
 
         Ok(config)
     }
-    
+
     /// 保存配置到文件
     pub fn save(&self, start_dir: impl AsRef<Path>) -> Result<()> {
         let start_dir = start_dir.as_ref();
         let config_path = find_config_in_ancestors(&start_dir)?;
-        
-        let toml_content = toml::to_string(self)
-            .with_context(|| "Failed to serialize config to TOML")?;
-            
+
+        let toml_content =
+            toml::to_string(self).with_context(|| "Failed to serialize config to TOML")?;
+
         fs::write(&config_path, toml_content)
             .with_context(|| format!("Failed to write config file: {}", config_path.display()))?;
-            
+
         Ok(())
     }
-    
+
     /// 设置密钥
     pub fn set_key(&mut self, key_id: &str, public_key: &str) {
-        self.keys.insert(key_id.to_string(), KeyEntry::Simple(public_key.to_string()));
+        self.keys
+            .insert(key_id.to_string(), KeyEntry::Simple(public_key.to_string()));
     }
-    
+
     /// 删除密钥
     pub fn remove_key(&mut self, key_id: &str) -> bool {
         self.keys.remove(key_id).is_some()
@@ -129,7 +147,7 @@ impl PasswordConfig {
     /// 创建一个新的 PasswordConfig 实例，从环境变量中读取配置 `cript_<key-id> = password`
     pub fn from_env() -> Self {
         let mut config = PasswordConfig::default();
-        
+
         // 遍历所有环境变量
         for (key, value) in std::env::vars() {
             // 检查是否以 cript_ 开头
@@ -137,12 +155,19 @@ impl PasswordConfig {
                 config.passwords.insert(key_id.to_string(), value);
             }
         }
-        
+
         config
     }
 
     /// 获取指定 key-id 对应的密码
     pub fn get_password(&self, key_id: &str) -> Option<&str> {
         self.passwords.get(key_id).map(|s| s.as_str())
+    }
+
+    pub fn get_secret_key(&self, key_id: &str) -> Result<SecretKey> {
+        Ok(passwd_to_secret_key(
+            self.get_password(key_id)
+                .ok_or(anyhow!("password<{key_id}> is not exist"))?,
+        ))
     }
 }
