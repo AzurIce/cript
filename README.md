@@ -73,4 +73,6 @@ cript keys rm <keyi-d>
 cript keys list
 cript encrypt <path> # process all files matches the extensions under the path
 cript decrypt <path> # process all files matches the extensions under the path
+cript status # show the encryption status (like git status)
+cript check  # check whether if every thing is fully encrypted
 ```
