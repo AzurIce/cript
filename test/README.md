@@ -11,11 +11,9 @@ For example, a `test.md` with following content:
 ```markdown
 # Test
 
-{cript}Hello Cript{/cript}
+{cript,cFlJ02pEay09nffludDBcDh4c+pA5VECtCOIkZ7l8+h6fp1qHB8hALXE6EOwFWGU6z9slRPs8In0lNiSxocofbWTxkyyE/c=/}
 
-{cript}
-Hello Cript
-{/cript}
+{cript,M0D87XGWSdSQkJ2CHpAAQnFX+wwNH9TLmEh45Fb9Tpm0AHEIrfWkJcsMJiI/cEDzBmepg+RUtQlD1KAX9Y3qaniqyv6OXsrE0g==/}
 
 asdasdjsak
 ```
@@ -25,11 +23,9 @@ Can be convert into:
 ```markdown
 # Test
 
-{cript}Hello Cript{/cript}
+{cript,xpUTvD7QfveytaCAl0olIlyZxPqCsKhwclAgo2ZFBZpWnwML8UlG3nq/LOZPMb6/nTDB6ygyHpU7PcPHpF63sO/1diTIEHU=/}
 
-{cript}
-Hello Cript
-{/cript}
+{cript,WDJ0iyNsJPHKXhjG6OubQ7DXqGw6DjnkrJxB/h5OqavfNz3Gm5/lSe8I33tKtcBW/V0CiCJWZys7qNqp2DCfRwGnrw3BgcuNLw==/}
 
 asdasdjsak
 ```

@@ -14,6 +14,7 @@ toml = { version = "0.8.20", features = ["parse"] }
 serde = { version = "1.0", features = ["derive"] }
 regex = "1.11.1"
 globwalk = "0.9.1"
+color-print = "0.3.7"
 
 [workspace]
 members = ["packages/*"]

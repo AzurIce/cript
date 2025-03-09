@@ -1,5 +1,6 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
+use color_print::cprintln;
 use cript::config::{CriptConfig, PasswordConfig};
 use cript::secret::passwd_to_public_key_base64;
 use cript::{decrypt_blocks, encrypt_blocks, get_encrypted_blocks, get_plain_text_blocks};
@@ -24,6 +25,10 @@ enum Commands {
     Encrypt { path: Option<PathBuf> },
     /// Decrypt the Cript Block(Encrypted) in all cript files under the path
     Decrypt { path: Option<PathBuf> },
+    /// Show encryption status of files under the path
+    Status { path: Option<PathBuf> },
+    /// Check if all files under the path are fully encrypted
+    Check { path: Option<PathBuf> },
 }
 
 #[derive(Subcommand)]
@@ -140,6 +145,87 @@ fn main() -> Result<()> {
                     decrypt_file(&path, &password_config)?;
                     println!("done")
                 }
+            }
+        }
+        Commands::Status { path } => {
+            let path = path.unwrap_or(PathBuf::from("./"));
+            let files = get_cript_files(&path, &config)?;
+
+            // 分类文件
+            let mut files_with_plain_text = Vec::new();
+            let mut fully_encrypted_files = Vec::new();
+
+            for file_path in files {
+                let content = fs::read_to_string(&file_path).unwrap();
+                let plain_blocks = get_plain_text_blocks(&content);
+                let encrypted_blocks = get_encrypted_blocks(&content);
+
+                if !plain_blocks.is_empty() && !encrypted_blocks.is_empty() {
+                    // 同时包含明文和密文块
+                    files_with_plain_text.push((
+                        file_path,
+                        plain_blocks.len(),
+                        encrypted_blocks.len(),
+                    ));
+                } else if !plain_blocks.is_empty() {
+                    // 只包含明文块
+                    files_with_plain_text.push((file_path, plain_blocks.len(), 0));
+                } else if !encrypted_blocks.is_empty() {
+                    // 只包含密文块
+                    fully_encrypted_files.push((file_path, encrypted_blocks.len()));
+                }
+            }
+
+            // 输出状态信息
+            println!("Cript Status:");
+
+            if files_with_plain_text.is_empty() {
+                println!("Nothing to encrypt, working space clean")
+            }
+
+            if !files_with_plain_text.is_empty() {
+                println!("\nFiles not fully encrypted:");
+                for (path, plain_count, encrypted_count) in &files_with_plain_text {
+                    cprintln!(
+                        "  <r>{}</r>:\t<r>{} plain</r>/<g>{} encrypted</g>/{} total",
+                        path.display(),
+                        plain_count,
+                        encrypted_count,
+                        plain_count + encrypted_count,
+                    );
+                }
+            }
+
+            if !fully_encrypted_files.is_empty() {
+                println!("\nFully encrypted files:");
+                for (path, count) in &fully_encrypted_files {
+                    cprintln!("  {}: {} encrypted blocks", path.display(), count);
+                }
+            }
+        }
+        Commands::Check { path } => {
+            let path = path.unwrap_or(PathBuf::from("./"));
+            let files = get_cript_files(&path, &config)?;
+
+            let mut unencrypted_files = Vec::new();
+
+            for file_path in files {
+                let content = fs::read_to_string(&file_path).unwrap();
+                let plain_blocks = get_plain_text_blocks(&content);
+
+                if !plain_blocks.is_empty() {
+                    unencrypted_files.push((file_path, plain_blocks.len()));
+                }
+            }
+
+            if !unencrypted_files.is_empty() {
+                println!("There are {} files not fully encrypted", unencrypted_files.len());
+                for (path, count) in &unencrypted_files {
+                    cprintln!("  <r>{}</r>: {} plain text blocks", path.display(), count);
+                }
+                return Err(anyhow::anyhow!("Not fully encrypted"));
+            } else {
+                println!("Nothing to encrypt, working space clean");
             }
         }
     }
