@@ -11,9 +11,9 @@ For example, a `test.md` with following content:
 ```markdown
 # Test
 
-{cript,v00Xwj4kitXTUEoL86rzCqWzzNkPJjWtGNkbl1BeARt4Rlr+gDPw7Tdoqj1OaN31FtLhsX5PiQRZDJ7mlPIHVHyhr+fPvJ0=/}
+{cript,Z3HXyOqzX3PXWAjKv1nhF05FtxxeESgq1s9DN2CKQSCsbgWeOI6/zO5mjLJ1rFEnKtGwGFG1GmuJ3jHHj3H3L8bluKF/jA4=/}
 
-{cript,FVVOj6lj9w/VDFJwR3wRqNha2sMIwe4T02QYZWcPC0zQPuv17HhjiTUIF3INWeJ3HxZAAjC/GRH4oofa7tEI4L5fFpzLgSVO5Q==/}
+{cript,vdfv3faNZEMEoJjpTGvNuWyri7X54lKqjpCk8dR8ghtERWof5tXv2DS0he892hoWawwEclSuibpbNSDFlpg492ArqYLaIp7IQg==/}
 
 asdasdjsak
 ```
@@ -23,9 +23,9 @@ Can be convert into:
 ```markdown
 # Test
 
-{cript,cUwu5okuevzpksLHD5M6u1y4OVBTjXd9SZiD8xwjiKLluZqz0zwnoVf8AuA27rAlwjHJUNQBtNGtKQrbJ+LZrI/MtzVOj5E=/}
+{cript,zjg1ICGbtT4vD3H/88X6hqj4wdSkYxZCyIy8S7Pl5HxgyELJZaGhmD0rtqujfIt615PY4ySl3pd816ChT+nTUO4p+0fpLyo=/}
 
-{cript,oHQJ1RE1GYxKiu31L1mpeV6RxHHydvSpTenqsuLGaVm5tzCNrzteGhE0RJUnyuwwNsevYRsBX9QtZJmUq4PJOK8jcoV8ws+bYw==/}
+{cript=key-id,ab43y7PjHvK9DIv5aptQSf+KwGq/MPn9Va+z2B7KLeVBYQcT7vUIDozEyLCRZ8/Ri1fexB9LlIQZDIBS/WyIqvBTtvgo2sOLFA==/}
 
 asdasdjsak
 ```

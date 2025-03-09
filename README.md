@@ -13,7 +13,7 @@ For example, a `test.md` with following content:
 
 {cript}Hello Cript{/cript}
 
-{cript=default}
+{cript=key-id}
 Hello Cript
 {/cript}
 
@@ -25,11 +25,11 @@ Can be convert into:
 ```markdown
 # Test
 
-{cript,Y8gkWm0noDfp2Dm45p7iadC7um7hfKMNPOv7gUepSaep955MEFqHoAElgnPTKgrq877ynhFyM9hOr7gU31kHOCJfe/omfVk=/}
+{cript,sSruDHRtuNTK8UCZl1btY2xpJtsGY9AnuGyn0y3JdgjZZvSMw272PQynbMwHO72Cs4wJ967MAZHr8BzELVAHUAKQGralogU=/}
 
-{cript,k8ECTpBAvKhkZ1NlHBGsN2g+fBq2dow8rXzG58Um8XOLE4OFxx8cuyN9NfOzYnznv6ZoJfZLBh2DUcPooroXL/3+1OyGtgehnw==/}
+{cript=key-id,LNocJMa2lsY/ImP7ZxLXbb3VXOQP9lHrnenIVRZUiipyGsAD9hgTzMkDPFN6fnxEEqI+hXBi/ELwZ3cvPBe6C+LaOa0oyGYh6w==/}
 
-asdasdjsa
+asdasdjsak
 ```
 
 And vice versa.

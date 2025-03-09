@@ -1,4 +1,6 @@
 extensions = ["md"]
 excludes = ["/README.md"]
+
 [keys]
-default = "zAQynvCR0krsKwiZDjMYxVtcgkd5csKaD83FsyDRT98=" # the password is `password`, you can play with it.
+default = "zAQynvCR0krsKwiZDjMYxVtcgkd5csKaD83FsyDRT98=" # password is `password`
+key-id = "EiNuEE+bFpc3TZXYrqmonKi5vxbL6nSup3aa3qL+Pj4="  # password is `cript`
